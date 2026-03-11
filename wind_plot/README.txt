@@ -8,4 +8,4 @@ wind_fields_plot:
 --------------------------------------------------------------------
 plot_rotation_tau_v1 : is a scirpt to plot the tau components from the ccmp files with new variables inside, but it did not work well cause of the different dimensions of the variables from the files.
 
-plot_rotation_tau_v2 : 
+plot_rotation_tau_v2 : is the script which plot in the correct one.

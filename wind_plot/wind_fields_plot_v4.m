@@ -5,8 +5,8 @@ clear; clc; close all;
 
 
 % Base directory (update path style for Windows)
-base_path = '/noc/users/vc2n24/wind_fields/subset/ccmp/v03.1/';
-save_path = '/noc/users/vc2n24/wind_fields/plot';
+base_path = '/noc/mpoc/rpdmoc/users/vc2n24/wind_fields/ccmp_data/';
+save_path = '/noc/mpoc/rpdmoc/users/vc2n24/wind_fields/plot';
 mkdir(save_path, 'v4');
 save_path = fullfile(save_path, 'v4');
 

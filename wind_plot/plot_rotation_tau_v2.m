@@ -5,7 +5,7 @@
 clear; clc; close all;
 
 %file_paths
-base_path_products= '/noc/mpoc/rpdmoc/users/vc2n24/wind_fields/data_products_v2';
+base_path_products= '/noc/mpoc/rpdmoc/users/vc2n24/wind_fields/data_products';
 base_path_ccmp = '/noc/mpoc/rpdmoc/users/vc2n24/wind_fields/ccmp_data';
 save_path = '/noc/mpoc/rpdmoc/users/vc2n24/wind_fields/plot';
 mkdir(save_path, 'plot_rotation_tau_v3');
@@ -22,7 +22,7 @@ latlim = [20 30];
 %% upload wind fields data, wind stress and components
 
 months = 1:12;
-years_numbers= 2022:2022;
+years_numbers= 2024:2024;
 
 % Loop over all files
 
@@ -74,7 +74,8 @@ for y= 1:length(years_numbers)
         
         %read tau_along already in lat, lon
         tau_along = ncread(file_path_products, 'tau_along');
-        
+        tau_along = tau_along'; 
+
         %create meshgrid
         [Lon, Lat] = meshgrid(lon, lat);
 
@@ -86,6 +87,9 @@ for y= 1:length(years_numbers)
          
         contourf(Lon, Lat, tau_along, 15, 'LineColor', 'none', 'LineStyle', 'none');
         %subsample and plot quiver
+
+        colormap(cmocean('balance'));
+        clim([-0.2 0.2]);
 
         skip = 10;
         Lonq = Lon(1:skip:end, 1:skip:end);
@@ -113,8 +117,6 @@ for y= 1:length(years_numbers)
     end
 
 h = colorbar('Position', [0.92 0.11 0.02 0.78]);  
-colormap(cmocean('balance'));
-clim([37 38]);
 ylabel(h, 'Wind Stress Along-shore (N m^{-2})')
 
 % Add an overall title for the entire figure
