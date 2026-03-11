@@ -1,0 +1,7 @@
+ccmp_data/
+data_products/
+*.nc
+*.mat
+*.fig
+*.png
+*.jpg
