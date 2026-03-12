@@ -9,7 +9,7 @@
 clear; clc; close all;
 
 base_path= '/noc/mpoc/rpdmoc/users/vc2n24/wind_fields/ccmp_data';
-save_base = '/noc/mpoc/rpdmoc/users/vc2n24/wind_fields/data_products';
+save_base = '/noc/mpoc/rpdmoc/users/vc2n24/wind_fields/data_products_test/';
 
 %% find the tangent to the coast between Cape Juby and Cape Blanc
 
@@ -41,7 +41,7 @@ theta= atan2(dx,dy);
 
 %% upload u, v component and calculate cross shore, along shore winds
 
-months = 1:12;
+months = 1:1;
 years_numbers= 2025:2025;
 
 % Loop over all files
