@@ -1,0 +1,3 @@
+- mask_50km_on_gebco : and 150 and 300 comes from scripts (upwelling_masks_scirpt/mask_plot.m)
+- ui_maks : is the double check for mask bands: from script: (upwelling_mask_script/ui_mask_check)
+- upwelling_mask: isoabath 200m ;
