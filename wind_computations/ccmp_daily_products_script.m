@@ -18,10 +18,11 @@ base_path= '/noc/mpoc/rpdmoc/users/vc2n24/wind_fields/ccmp_data';
 save_base = '/noc/mpoc/rpdmoc/users/vc2n24/wind_fields/data_products';
 
 %Two points to draw the coastal line from Cape Juby to Cape Blanc
-cj_lat= 27.96; 
-cj_lon= -13.20; 
-cb_lat= 21.17; 
-cb_lon= -17.20;
+cj_lat= 27.89;
+cj_lon= -13.03;
+
+cb_lat= 20.91;
+cb_lon= -17.06;
 
 %transform them in radiants
 
@@ -44,8 +45,8 @@ theta= atan2(dx,dy);
 % upload u, v component and calculate cross shore, along shore winds
 
 days = 1:31;
-months = 1:8;
-years_numbers= 2025:2025;
+months = 1:2;
+years_numbers= 2024:2024;
 
 % Loop over all files
 
@@ -76,10 +77,10 @@ for y= 1:length(years_numbers)
             uwnd = ncread(file_path, 'uwnd');
             vwnd = ncread(file_path, 'vwnd');
             wspd = ncread(file_path, 'ws');
-
+            % 
             lat = ncread(file_path,'latitude');
             lon = ncread(file_path,'longitude');
-            
+
             lat = double(lat(:));
             lon = double(lon(:));
 
@@ -90,10 +91,10 @@ for y= 1:length(years_numbers)
             % Permute to get the same dimensions as the original ccmp dataset
             %right now dimensions are lon, lat, time but I want them in lat,
             %lon , time
-             
-            uwnd = permute(uwnd, [2 1 3]);
-            vwnd = permute(vwnd, [2 1 3]);
-            wspd = permute(wspd, [2 1 3]);
+            % 
+            % uwnd = permute(uwnd, [2 1 3]);
+            % vwnd = permute(vwnd, [2 1 3]);
+            % wspd = permute(wspd, [2 1 3]);
 
             %scalars projections of wind vectors on the coast and offshore,
             %once transformed the wind vector rotated would be (u_along,
@@ -123,14 +124,18 @@ for y= 1:length(years_numbers)
             out_path = fullfile(out_dir, out_file);
 
             % Create variables in the new file 
-            nccreate(out_path, 'u_along', 'Dimensions', {'latitude', 128, 'longitude', 192, 'time', 4}, 'Datatype','single', 'FillValue', single(-9999));
-            nccreate(out_path, 'u_cross', 'Dimensions', {'latitude', 128, 'longitude', 192, 'time', 4}, 'Datatype','single', 'FillValue', single(-9999));
-            nccreate(out_path, 'taux', 'Dimensions', {'latitude', 128, 'longitude', 192, 'time', 4}, 'Datatype','single', 'FillValue', single(-9999));
-            nccreate(out_path, 'tauy', 'Dimensions', {'latitude', 128, 'longitude', 192, 'time', 4}, 'Datatype','single', 'FillValue', single(-9999));
-            nccreate(out_path, 'tau_along', 'Dimensions', {'latitude', 128, 'longitude', 192, 'time', 4}, 'Datatype','single', 'FillValue', single(-9999));
-            nccreate(out_path, 'tau_cross', 'Dimensions', {'latitude', 128, 'longitude', 192, 'time', 4}, 'Datatype','single', 'FillValue', single(-9999));
             nccreate(out_path, 'latitude',  'Dimensions', {'latitude', numel(lat)},  'Datatype','double');
             nccreate(out_path, 'longitude', 'Dimensions', {'longitude', numel(lon)}, 'Datatype','double');
+            nccreate(out_path, 'u_along', 'Dimensions', {'longitude', 192,'latitude', 128, 'time', 4}, 'Datatype','single', 'FillValue', single(-9999));
+            nccreate(out_path, 'u_cross', 'Dimensions', {'longitude', 192,'latitude', 128, 'time', 4}, 'Datatype','single', 'FillValue', single(-9999));
+            nccreate(out_path, 'taux', 'Dimensions', {'longitude', 192,'latitude', 128, 'time', 4}, 'Datatype','single', 'FillValue', single(-9999));
+            nccreate(out_path, 'tauy', 'Dimensions', {'longitude', 192,'latitude', 128, 'time', 4}, 'Datatype','single', 'FillValue', single(-9999));
+            nccreate(out_path, 'tau_along', 'Dimensions', {'longitude', 192,'latitude', 128, 'time', 4}, 'Datatype','single', 'FillValue', single(-9999));
+            nccreate(out_path, 'tau_cross', 'Dimensions', {'longitude', 192,'latitude', 128, 'time', 4}, 'Datatype','single', 'FillValue', single(-9999));
+
+            % % Write coordinate variables FIRST
+            % ncwrite(out_path, 'latitude',  lat);
+            % ncwrite(out_path, 'longitude', lon);
 
             ncwrite(out_path, 'u_along', single(u_along));
             ncwrite(out_path, 'u_cross', single(u_cross));
@@ -189,7 +194,7 @@ for y= 1:length(years_numbers)
             
             ncwriteatt(out_path, 'latitude', 'units', 'degrees_north');
             ncwriteatt(out_path, 'longitude','units', 'degrees_east');
-            
+
             %File level attributes for provenance 
             ncwriteatt(out_path, '/', 'source_file', file_path);
             ncwriteatt(out_path, '/', 'generation_date', string(datetime("now"),'yyyy-MM-dd HH:mm:ss'));

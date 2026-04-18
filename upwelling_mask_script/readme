@@ -1,0 +1,11 @@
+- ui_mask : scirpt to check on wheater to pick the portion of 50km or 200m isobath;
+
+- mask_making_script: script to make masks 50, 150, 300km ;
+
+- ccmp_offshore_masks: .mat file with 50,150,300 km masks structures;
+
+- mask_plots : script to make plots of mask (ccmp_offshore_masks);
+
+- maks_product : scirpt to masks data_products make masks 50, 150, 300 km;
+
+

@@ -1,0 +1,252 @@
+%script to compute rotate vectors in direction along shore Cape Juby to
+%Cape Blanc and cross shore modified from rotation_daily_v1.m 
+% ; also wind stress is computed and variables
+%addedd to the original netcdf files of CCMP from Vanessa Cavucci (vc2n24@soton.ac.uk)
+% input data ccmp from 'Z:\mpoc\rpdmoc\users\vc2n24\wind_fields\ccmp_data';
+% output data would be organized in fodlers by year and months
+% with variables (u_along, u_cross, taux, tauy, tau_along, tau_cross)
+% calculated form the ccmp.
+% Modified script to save new variables/attributes to a *new* NetCDF file
+% Files will be saved to Z:\mpoc\rpdmoc\users\vc2n24\wind_fields\data_products
+% Organized in folders divided by year (Y2005-Y2025), month (M01-M12)
+% File naming: CCMP_products_'YnumberMnumberDnumber'_V03.1_L4.nc
+% General attributes added for provenance
+
+clear; clc; close all;
+
+base_path= '/noc/mpoc/rpdmoc/users/vc2n24/wind_fields/ccmp_data';
+save_base = '/noc/mpoc/rpdmoc/users/vc2n24/wind_fields/data_products';
+
+%Two points to draw the coastal line from Cape Juby to Cape Blanc
+cj_lat= 27.89;
+cj_lon= -13.03;
+
+cb_lat= 20.91;
+cb_lon= -17.06;
+
+%transform them in radiants
+
+rad= pi / 180; 
+
+cj_lat_rad= cj_lat * rad; 
+cj_lon_rad= cj_lon * rad;
+cb_lat_rad= cb_lat * rad; 
+cb_lon_rad= cb_lon * rad;
+
+% calculate dx and dy being: dx (the difference between lon, and dy 
+% the difference between lat of the north point cape juby (2) and south
+% point cape blanc (1). 
+
+dy= (cj_lat_rad - cb_lat_rad);
+dx= (cj_lon_rad - cb_lon_rad) * cos ((cj_lat_rad+cb_lat_rad)/2);
+
+theta= atan2(dx,dy);
+
+% upload u, v component and calculate cross shore, along shore winds
+
+days = 1:31;
+months = 1:8;
+years_numbers= 2025:2025;
+
+% Loop over all files
+
+for y= 1:length(years_numbers)
+
+    Ystr= sprintf('Y%04d', years_numbers(y));
+    Ynumber= sprintf('%04d', years_numbers(y));
+
+    for m = 1:length(months)
+
+        Mstr = sprintf('M%02d', months(m));
+        Mnumber = sprintf ('%02d', months(m));
+
+        for d = 1:length(days)
+
+            Dnumber = sprintf ('%02d', days(d));
+            file_name = sprintf(['CCMP_Wind_Analysis_' Ynumber Mnumber Dnumber '_V03.1_L4.nc']);
+            file_path = fullfile(base_path, Ystr, Mstr, file_name);
+
+            if ~isfile(file_path)
+                warning('File not found: %s', file_path);
+                continue;
+            end
+
+            fprintf('Processing %s\n', file_path);
+
+            % Read variables from original file
+            uwnd = ncread(file_path, 'uwnd');
+            vwnd = ncread(file_path, 'vwnd');
+            wspd = ncread(file_path, 'ws');
+            
+            lat = ncread(file_path,'latitude');
+            lon = ncread(file_path,'longitude');
+            
+            % Try to read time, if it doesn't exist use default
+            try
+                time_original = ncread(file_path, 'time');
+                time_units = ncreadatt(file_path, 'time', 'units');
+            catch
+                time_original = [0, 6, 12, 18];  % Default hours
+                time_units = 'hours since 00:00:00';
+            end
+
+            lat = double(lat(:));
+            lon = double(lon(:));
+            time_original = double(time_original(:));
+
+            % Get actual dimensions from data
+            n_lon = length(lon);
+            n_lat = length(lat);
+            n_time = length(time_original);
+
+            %vectors
+            U = uwnd; 
+            V = vwnd;
+            
+            %scalars projections of wind vectors on the coast and offshore,
+            %once transformed the wind vector rotated would be (u_along,
+            %u_cross)
+
+            u_along= -(U .* sin(theta) + V .* cos(theta));
+            u_cross= - (U.* cos(theta) - V .*sin(theta));
+            w_rotated = sqrt(u_along.^2 + u_cross.^2);
+             
+            % calculate wind stress tau from function windstress which is
+            % using CD from Sylla and Santos
+            [taux, tauy] = windstress(uwnd,vwnd);
+            %rotate
+            tau_along = - (taux .* sin(theta) + tauy .* cos(theta) );
+            tau_cross = - (taux .* cos(theta) - tauy .* sin(theta) );
+
+            % Prepare output file path 
+            out_dir = fullfile(save_base, Ystr, Mstr);
+            if ~isfolder(out_dir)
+                mkdir(out_dir);
+            end
+            out_file = sprintf('CCMP_products_%s%s%s_V03.1_L4.nc', Ynumber, Mnumber, Dnumber);
+            out_path = fullfile(out_dir, out_file);
+
+            % ========================================================================
+            % DELETE EXISTING FILE IF IT EXISTS
+            % ========================================================================
+            if isfile(out_path)
+                delete(out_path);
+            end
+
+            % ========================================================================
+            % STEP 1: CREATE DIMENSIONS FIRST
+            % ========================================================================
+            nccreate(out_path, 'longitude', 'Dimensions', {'longitude', n_lon}, 'Datatype', 'double');
+            nccreate(out_path, 'latitude',  'Dimensions', {'latitude', n_lat},  'Datatype', 'double');
+            nccreate(out_path, 'time',      'Dimensions', {'time', n_time},     'Datatype', 'double');
+
+            % ========================================================================
+            % STEP 2: CREATE DATA VARIABLES WITH PROPER DIMENSION REFERENCES
+            % ========================================================================
+            nccreate(out_path, 'u_along', 'Dimensions', {'longitude', 'latitude', 'time'}, ...
+                'Datatype', 'single', 'FillValue', single(-9999));
+            nccreate(out_path, 'u_cross', 'Dimensions', {'longitude', 'latitude', 'time'}, ...
+                'Datatype', 'single', 'FillValue', single(-9999));
+            nccreate(out_path, 'taux', 'Dimensions', {'longitude', 'latitude', 'time'}, ...
+                'Datatype', 'single', 'FillValue', single(-9999));
+            nccreate(out_path, 'tauy', 'Dimensions', {'longitude', 'latitude', 'time'}, ...
+                'Datatype', 'single', 'FillValue', single(-9999));
+            nccreate(out_path, 'tau_along', 'Dimensions', {'longitude', 'latitude', 'time'}, ...
+                'Datatype', 'single', 'FillValue', single(-9999));
+            nccreate(out_path, 'tau_cross', 'Dimensions', {'longitude', 'latitude', 'time'}, ...
+                'Datatype', 'single', 'FillValue', single(-9999));
+
+            % ========================================================================
+            % STEP 3: WRITE COORDINATE VARIABLES
+            % ========================================================================
+            ncwrite(out_path, 'longitude', lon);
+            ncwrite(out_path, 'latitude',  lat);
+            ncwrite(out_path, 'time',      time_original);
+
+            % ========================================================================
+            % STEP 4: WRITE DATA VARIABLES
+            % ========================================================================
+            ncwrite(out_path, 'u_along', single(u_along));
+            ncwrite(out_path, 'u_cross', single(u_cross));
+            ncwrite(out_path, 'taux', single(taux));
+            ncwrite(out_path, 'tauy', single(tauy));
+            ncwrite(out_path, 'tau_along', single(tau_along));
+            ncwrite(out_path, 'tau_cross', single(tau_cross));
+
+            % ========================================================================
+            % STEP 5: WRITE COORDINATE ATTRIBUTES
+            % ========================================================================
+            ncwriteatt(out_path, 'longitude', 'standard_name', 'longitude');
+            ncwriteatt(out_path, 'longitude', 'units', 'degrees_east');
+            
+            ncwriteatt(out_path, 'latitude', 'standard_name', 'latitude');
+            ncwriteatt(out_path, 'latitude', 'units', 'degrees_north');
+            
+            ncwriteatt(out_path, 'time', 'standard_name', 'time');
+            ncwriteatt(out_path, 'time', 'units', time_units);
+            ncwriteatt(out_path, 'time', 'calendar', 'gregorian');
+
+            % ========================================================================
+            % STEP 6: WRITE DATA VARIABLE ATTRIBUTES
+            % ========================================================================
+            ncwriteatt(out_path, 'u_along', 'standard_name', 'wind_speed_along_coast');
+            ncwriteatt(out_path, 'u_along', 'long_name', 'Along-shore wind component');
+            ncwriteatt(out_path, 'u_along', 'units', 'm s-1');
+            ncwriteatt(out_path, 'u_along', 'height', '10 meters above sea-surface');
+            ncwriteatt(out_path, 'u_along', 'method', ['Computed from rotated wind ' ...
+                'using coastline angle theta: dy = cj_lat_rad - cb_lat_rad; dx = ' ...
+                '(cj_lon_rad - cb_lon_rad) * cos((cj_lat_rad+cb_lat_rad)/2); theta = atan2(dx,dy); ' ...
+                'u_along = -(U .* sin(theta) + V .* cos(theta)).']);
+            ncwriteatt(out_path, 'u_along', 'comment', 'Positive from Cape Juby to Cape Blanc');
+            
+            ncwriteatt(out_path, 'u_cross', 'standard_name', 'wind_speed_across_coast');
+            ncwriteatt(out_path, 'u_cross', 'long_name', 'Cross-shore wind component');
+            ncwriteatt(out_path, 'u_cross', 'units', 'm s-1');
+            ncwriteatt(out_path, 'u_cross', 'height', '10 meters above sea-surface');
+            ncwriteatt(out_path, 'u_cross', 'method', 'Computed from rotated wind using coastline angle theta');
+            ncwriteatt(out_path, 'u_cross', 'comment', 'Positive from on-shore to offshore');
+            
+            ncwriteatt(out_path, 'taux', 'standard_name', 'eastward_wind_stress');
+            ncwriteatt(out_path, 'taux', 'long_name', 'Zonal (eastward) wind stress');
+            ncwriteatt(out_path, 'taux', 'units', 'N m-2');
+            ncwriteatt(out_path, 'taux', 'height', '10 m above sea surface');
+            ncwriteatt(out_path, 'taux', 'method', ['Computed from uwnd using taux = rho_air * C_D * ' ...
+                '|W| * uwnd. Drag coefficient from Kara et al. (2005).']);
+
+            ncwriteatt(out_path, 'tauy', 'standard_name', 'northward_wind_stress');
+            ncwriteatt(out_path, 'tauy', 'long_name', 'Meridional (northward) wind stress');
+            ncwriteatt(out_path, 'tauy', 'units', 'N m-2');
+            ncwriteatt(out_path, 'tauy', 'height', '10 m above sea surface');
+            ncwriteatt(out_path, 'tauy', 'method', ['Computed from vwnd using tauy = rho_air * C_D * ' ...
+                '|W| * vwnd. Drag coefficient from Kara et al. (2005).']);
+
+            ncwriteatt(out_path, 'tau_along', 'standard_name', 'wind_stress_along_coast');
+            ncwriteatt(out_path, 'tau_along', 'long_name', 'Along-shore wind stress component');
+            ncwriteatt(out_path, 'tau_along', 'units', 'N m-2');
+            ncwriteatt(out_path, 'tau_along', 'height', '10 m above sea surface');
+            ncwriteatt(out_path, 'tau_along', 'method', 'Computed by rotating (taux, tauy) using coastline angle theta');
+            ncwriteatt(out_path, 'tau_along', 'comment', 'Positive along-shore = direction Cape Juby to Cape Blanc.');
+
+            ncwriteatt(out_path, 'tau_cross', 'standard_name', 'wind_stress_across_coast');
+            ncwriteatt(out_path, 'tau_cross', 'long_name', 'Cross-shore (offshore) wind stress component');
+            ncwriteatt(out_path, 'tau_cross', 'units', 'N m-2');
+            ncwriteatt(out_path, 'tau_cross', 'height', '10 m above sea surface');
+            ncwriteatt(out_path, 'tau_cross', 'method', 'Computed by rotating (taux, tauy) using coastline angle theta');
+            ncwriteatt(out_path, 'tau_cross', 'comment', 'Positive cross-shore = offshore (east to west).');
+
+            % ========================================================================
+            % STEP 7: WRITE GLOBAL ATTRIBUTES
+            % ========================================================================
+            ncwriteatt(out_path, '/', 'source_file', file_path);
+            ncwriteatt(out_path, '/', 'generation_date', string(datetime("now"),'yyyy-MM-dd HH:mm:ss'));
+            ncwriteatt(out_path, '/', 'description', ...
+                'Wind-derived products (rotated components and wind stress) created from CCMP input files.');
+            ncwriteatt(out_path, '/', 'script_used', 'ccmp_daily_products_script.m');
+
+            fprintf('✓ Successfully created: %s\n', out_file);
+
+        end
+    end
+end
+
+fprintf('\n✓ All files processed successfully!\n');

@@ -6,6 +6,8 @@ The scripts in wind computations:
 
 --------------------------------------------------------------
 
-- ccmp_daily_products_script: modified from rotation_daily , is the script, which produce the new files with new variables, like the taux, tauy, ualong, ucross.
+- ccmp_daily_products_script: modified from rotation_daily , is the script, which produce the new files with new variables, like the taux, tauy, ualong, ucross, these ones are the official ones made to make the data_products.
 
-- ccmp_mothly_products_script: monthly version of the daily one.
+- ccmp_mothly_products_script: monthly version of the daily one, these ones are the official ones used to make the data_products.
+
+- ccmp_daily_products_corrected_version: is the script to prodcue data_products corrected version date 14/04/2026
